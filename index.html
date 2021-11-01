@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Send metrics</title>
+</head>
+<body>
+  <script type="text/javascript" charset="utf-8" async src="https://api-maps.yandex.ru/services/constructor/1.0/js/?um=constructor%3Ab4fdff6c8232f02f8a04648a43a6458b922ca8ac4246b5e0d03dab25fdbb10e3&amp;width=100%25&amp;height=400&amp;lang=ru_RU&amp;scroll=true"></script>
+  <script src="send.js"></script>
+  <script>
+    let counter = new Counter();
+
+    counter.init('66868068-55f4-432f-af2f-0317c8b640a3', String(Math.random()).substr(2, 12), 'map');
+    counter.setAdditionalParams({
+      env: location.href.includes('github.io') ? 'production' : 'development',
+      platform: navigator.userAgentData.mobile ? 'touch' : 'desktop',
+      browser: navigator.userAgent.indexOf('Chrome') !== -1 ? 'Сhrome' : 'other',
+    });
+
+    counter.send('connect', performance.timing.connectEnd - performance.timing.connectStart);
+    counter.send('ttfb', performance.timing.responseEnd - performance.timing.requestStart);
+
+    if ('PerformanceObserver' in window) {
+      new Promise((resolve, reject)=>{
+        let observer = new PerformanceObserver((list) => {
+          resolve(list);
+        });
+
+        observer.observe({type: 'paint', buffered: true});
+      }).then((list)=>{
+        list.getEntries().forEach((entry) => {
+          if (entry.name === 'first-contentful-paint') {
+            counter.send('fcp', entry.startTime);
+          }
+        });
+      }).catch((error)=>{
+        console.warn(error);
+      });
+
+      new Promise((resolve, reject)=>{
+        let observer = new PerformanceObserver((list) => {
+          resolve(list);
+        });
+
+        observer.observe({type: 'layout-shift', buffered: true});
+      }).then((list)=>{
+        list.getEntries().forEach((entry) => {
+            counter.send('cls', entry.startTime);
+        });
+      }).catch((error)=>{
+        console.warn(error);
+      });
+
+      new Promise((resolve, reject)=>{
+        let observer = new PerformanceObserver((list) => {
+          resolve(list);
+        });
+
+        observer.observe({type: 'resource', buffered: true});
+      }).then((list)=>{
+        list.getEntries().forEach((entry) => {
+            counter.send('resource', entry.startTime);
+        });
+      }).catch((error)=>{
+        console.warn(error);
+      });
+    }
+  </script>
+</body>
+</html>
+ 
